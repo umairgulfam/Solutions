@@ -1,0 +1,5 @@
+*
+!radar/
+!radar/**
+radar/**/__pycache__/
+radar/**/*.pyc

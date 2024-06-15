@@ -1,0 +1,38 @@
+name: Validate
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -v
+      - run: python -m compileall -q radar
+      - run: node --check radar/static/app.js
+      - run: python -m pip install .
+      - run: secret-expiry-radar --help
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t radar:test .
+      - run: docker run --rm radar:test python -m radar --help
+      - name: Container HTTP smoke test
+        shell: bash
+        run: |
+          token=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+          echo "::add-mask::$token"
+          docker run -d --name radar -p 127.0.0.1:8080:8080 -e RADAR_API_TOKEN="$token" radar:test
+          trap 'docker rm -f radar' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8080/healthz; then break; fi
+            sleep 1
+          done
+          curl --fail --silent -H "Authorization: Bearer $token" http://127.0.0.1:8080/api/assets

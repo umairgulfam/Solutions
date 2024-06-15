@@ -1,0 +1,32 @@
+services:
+  dashboard:
+    build: .
+    image: secret-expiry-radar:local
+    env_file: .env
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - radar-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+  worker:
+    build: .
+    image: secret-expiry-radar:local
+    command: ["python", "-m", "radar", "worker", "--send", "--interval", "3600"]
+    env_file: .env
+    volumes:
+      - radar-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+volumes:
+  radar-data:

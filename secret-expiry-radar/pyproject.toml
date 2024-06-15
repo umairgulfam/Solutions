@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secret-expiry-radar"
+version = "1.0.0"
+description = "Metadata-only credential expiry and rotation monitoring"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Umair Gulfam"}]
+dependencies = []
+
+[project.scripts]
+secret-expiry-radar = "radar.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["radar*"]
+
+[tool.setuptools.package-data]
+radar = ["static/*"]

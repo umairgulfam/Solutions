@@ -1,0 +1,29 @@
+[
+  {
+    "id": "example-api-tls",
+    "name": "api.example.com",
+    "kind": "tls",
+    "owner": "Platform team",
+    "environment": "example",
+    "expires_at": "2027-01-01T00:00:00Z",
+    "source": "manual"
+  },
+  {
+    "id": "example-aws-key",
+    "name": "Deployment key",
+    "kind": "aws_access_key",
+    "owner": "Cloud operations",
+    "environment": "example",
+    "created_at": "2026-09-01T00:00:00Z",
+    "rotation_days": 90,
+    "source": "manual"
+  },
+  {
+    "id": "example-ssh-key",
+    "name": "Build runner SSH key",
+    "kind": "ssh_key",
+    "owner": "DevOps",
+    "environment": "example",
+    "source": "manual"
+  }
+]

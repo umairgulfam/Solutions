@@ -1,0 +1,6 @@
+# Example only. Replace paths, target, owner and Python executable.
+# Configure cloud identities/environment through your host's secure job setup.
+# Every day: refresh a verified TLS endpoint. Route errors to your monitoring system.
+0 1 * * * cd /opt/secret-expiry-radar && /usr/bin/python3 -m radar --db /var/lib/radar/radar.db collect tls YOUR-HOSTNAME --owner 'Platform team'
+# Every hour: evaluate metadata. Do not also run the Compose worker for this DB.
+5 * * * * cd /opt/secret-expiry-radar && /usr/bin/python3 -m radar --db /var/lib/radar/radar.db check --send
