@@ -1,0 +1,106 @@
+{
+  "description": "A day where spend jumped $47. Four services moved; one new AI Foundry deployment explains most of it.",
+  "currency": "USD",
+  "services": [
+    {
+      "service": "EC2",
+      "provider": "aws",
+      "account": "123456789012",
+      "previous": 210.0,
+      "current": 222.0,
+      "tags": { "Team": "platform" }
+    },
+    {
+      "service": "RDS",
+      "provider": "aws",
+      "account": "123456789012",
+      "previous": 148.0,
+      "current": 166.0,
+      "tags": { "Team": "data-platform" }
+    },
+    {
+      "service": "API Gateway",
+      "provider": "aws",
+      "account": "123456789012",
+      "previous": 31.0,
+      "current": 35.0,
+      "tags": { "Team": "platform" }
+    },
+    {
+      "service": "AI Foundry",
+      "provider": "azure",
+      "account": "sub-ai-rnd-prod",
+      "previous": 4.0,
+      "current": 17.0,
+      "tags": { "Team": "AI-R&D", "Environment": "prod" }
+    },
+    {
+      "service": "S3",
+      "provider": "aws",
+      "account": "123456789012",
+      "previous": 44.0,
+      "current": 44.0,
+      "tags": { "Team": "platform" }
+    }
+  ],
+  "changes": [
+    {
+      "source": "terraform",
+      "identifier": "azurerm_cognitive_deployment.gpt4o_rnd",
+      "title": "AI Foundry resource created yesterday",
+      "action": "create",
+      "hours_ago": 26,
+      "author": "s.raza",
+      "team": "AI-R&D",
+      "resource_types": ["azurerm_cognitive_deployment"],
+      "metadata": {
+        "address": "module.ai_platform.azurerm_cognitive_deployment.gpt4o_rnd",
+        "tags": { "Team": "AI-R&D" }
+      }
+    },
+    {
+      "source": "git",
+      "identifier": "9f3ac21",
+      "title": "feat(ai): add gpt-4o deployment for evaluation harness",
+      "action": "create",
+      "hours_ago": 27,
+      "author": "s.raza",
+      "resource_types": [],
+      "url": "https://github.com/example-org/infra/commit/9f3ac21",
+      "metadata": { "files": ["ai-platform/foundry.tf"] }
+    },
+    {
+      "source": "terraform",
+      "identifier": "aws_db_instance.orders",
+      "title": "RDS instance class changed db.r6g.large -> db.r6g.xlarge",
+      "action": "update",
+      "hours_ago": 20,
+      "author": "m.khan",
+      "team": "data-platform",
+      "resource_types": ["aws_db_instance"],
+      "metadata": { "address": "module.orders.aws_db_instance.orders" }
+    },
+    {
+      "source": "git",
+      "identifier": "41b0d7e",
+      "title": "chore(asg): raise desired capacity 4 -> 5 for checkout workers",
+      "action": "update",
+      "hours_ago": 33,
+      "author": "a.fernandes",
+      "resource_types": ["aws_autoscaling_group"],
+      "url": "https://github.com/example-org/infra/commit/41b0d7e",
+      "metadata": { "files": ["compute/checkout.tf"] }
+    },
+    {
+      "source": "git",
+      "identifier": "c07e5b8",
+      "title": "docs: update runbook links",
+      "action": "change",
+      "hours_ago": 8,
+      "author": "j.doe",
+      "resource_types": [],
+      "url": "https://github.com/example-org/infra/commit/c07e5b8",
+      "metadata": { "files": ["docs/runbooks.md"] }
+    }
+  ]
+}

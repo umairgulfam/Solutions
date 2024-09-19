@@ -1,0 +1,144 @@
+# Cloud Cost Detective — example configuration
+#
+# Copy to `costdetective.yaml` in your repo root (or pass -c /path/to/file).
+# Every value here is optional; the defaults shown are what the tool uses if
+# you omit the key entirely.
+#
+# Resolution order, last one wins:
+#   built-in defaults  ->  this file  ->  COSTDETECTIVE_* env vars  ->  CLI flags
+#
+# ${VAR} and ${VAR:-fallback} are expanded from the environment, so secrets
+# never need to be committed. Run `costdetective validate --check-access` to
+# confirm the file parses and every source can actually authenticate.
+
+# ---------------------------------------------------------------------------
+# Where spend data comes from: demo | aws | azure | file
+# ---------------------------------------------------------------------------
+cost_source: demo
+
+# Where "what changed" comes from. Order does not matter; all are queried and
+# the results pooled before scoring.
+change_sources:
+  - terraform
+  - git
+
+currency: USD
+
+# Days per comparison window. 1 = today vs yesterday. 7 = this week vs last.
+lookback_days: 1
+
+# How far back a change is allowed to be blamed for a cost movement. Cloud
+# billing lags reality by hours, so shorter than ~24h will miss real causes;
+# longer than ~96h starts producing coincidences.
+correlation_window_hours: 72
+
+# Ignore services that moved less than this. Stops rounding noise from
+# drowning the signal.
+min_delta: 1.00
+
+# ---------------------------------------------------------------------------
+# AWS (requires: pip install 'cloud-cost-detective[aws]')
+# IAM permission needed: ce:GetCostAndUsage
+# ---------------------------------------------------------------------------
+aws:
+  profile: null              # null = default credential chain (env, IRSA, IMDS)
+  region: us-east-1          # Cost Explorer is global but the SDK needs a region
+  metric: UnblendedCost      # or AmortizedCost / NetUnblendedCost
+  group_by: SERVICE          # or LINKED_ACCOUNT / USAGE_TYPE
+  # account_id: "123456789012"
+
+# ---------------------------------------------------------------------------
+# Azure (requires: pip install 'cloud-cost-detective[azure]')
+# Auth uses DefaultAzureCredential: managed identity, workload identity,
+# service principal env vars, or `az login` all work unchanged.
+# ---------------------------------------------------------------------------
+azure:
+  subscription_id: ${AZURE_SUBSCRIPTION_ID:-}
+  # scope: /providers/Microsoft.Billing/billingAccounts/1234  # overrides subscription
+
+# ---------------------------------------------------------------------------
+# Terraform
+#
+# Point at a plan for "what is about to change" (pre-merge cost gating):
+#   terraform plan -out=tfplan && terraform show -json tfplan > tfplan.json
+#
+# Or at state for "what did change":
+#   terraform show -json > state.json
+#
+# If neither is set, the tool shells out to `terraform show -json` in workdir.
+# ---------------------------------------------------------------------------
+terraform:
+  plan_json: null
+  state_json: null
+  workdir: .
+
+# ---------------------------------------------------------------------------
+# Git — the infrastructure repo whose commits should be correlated.
+# ---------------------------------------------------------------------------
+git:
+  repo: .
+  branch: null               # null = current HEAD
+  max_commits: 200
+
+# ---------------------------------------------------------------------------
+# Ownership resolution. First hit wins, top to bottom:
+#   1. tags on the billed resource
+#   2. tags on the suspected Terraform resource
+#   3. by_service below
+#   4. by_path below (matched against files touched by the commit)
+#   5. by_author below
+#   6. the commit author themselves
+#   7. default
+# ---------------------------------------------------------------------------
+ownership:
+  tag_keys:
+    - Owner
+    - owner
+    - Team
+    - team
+    - CostCenter
+
+  by_service:
+    "API Gateway": platform-team
+    "AI Foundry": AI-R&D
+
+  by_path:
+    "ai-platform/": AI-R&D
+    "data/": data-platform
+    "compute/": platform-team
+
+  by_author:
+    s.raza: AI-R&D
+    m.khan: data-platform
+
+  default: finops
+
+# ---------------------------------------------------------------------------
+# Thresholds. `fail` is the default for `--fail-over`; exceeding it exits 2,
+# which is how you gate a pipeline without parsing output.
+# ---------------------------------------------------------------------------
+thresholds:
+  warn: 25.00
+  fail: 100.00
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+notify:
+  slack_webhook: ${SLACK_WEBHOOK_URL:-}
+  mention_on_threshold: "<!subteam^S012ABCDEF>"   # e.g. a @finops user group
+
+# ---------------------------------------------------------------------------
+# Extend the built-in service map with anything it does not know yet.
+# Merged on top of src/costdetective/data/service_map.yaml.
+# ---------------------------------------------------------------------------
+service_map:
+  resource_types:
+    aws_kinesis_stream: Kinesis
+    aws_mq_broker: Amazon MQ
+
+  keywords:
+    Kinesis: [kinesis, shard, stream]
+
+  actions:
+    Kinesis: "Check shard count — shards bill hourly whether they carry traffic or not."

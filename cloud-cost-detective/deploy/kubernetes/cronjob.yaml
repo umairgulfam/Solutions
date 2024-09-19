@@ -1,0 +1,157 @@
+---
+# Daily cost investigation as a Kubernetes CronJob.
+#
+#   kubectl apply -f deploy/kubernetes/cronjob.yaml
+#
+# Auth uses IRSA (EKS) — the ServiceAccount is annotated with a role ARN, so no
+# static credentials are mounted. On AKS, swap the annotation for an Azure
+# workload-identity label and set COSTDETECTIVE_AZURE_SUBSCRIPTION_ID.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finops
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cost-detective
+  namespace: finops
+  annotations:
+    # Replace with the role created by deploy/terraform.
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/cost-detective-reader
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cost-detective-config
+  namespace: finops
+data:
+  costdetective.yaml: |
+    cost_source: aws
+    change_sources: [git]
+    lookback_days: 1
+    correlation_window_hours: 72
+    min_delta: 1.00
+
+    aws:
+      region: us-east-1
+      metric: AmortizedCost
+
+    ownership:
+      tag_keys: [Owner, Team, CostCenter]
+      default: finops
+
+    notify:
+      slack_webhook: ${SLACK_WEBHOOK_URL}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cost-detective-secrets
+  namespace: finops
+type: Opaque
+stringData:
+  # Replace via your secret manager (External Secrets, SOPS, Vault).
+  # Do not commit a real webhook.
+  slack-webhook: "https://hooks.slack.com/services/REPLACE/ME"
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cost-detective
+  namespace: finops
+  labels:
+    app.kubernetes.io/name: cost-detective
+    app.kubernetes.io/component: finops
+spec:
+  # 07:15 UTC on weekdays. Billing data lags, so an early-morning run reports
+  # a partially populated day and invents phantom drops.
+  schedule: "15 7 * * 1-5"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      # Stop a wedged run from occupying the slot until the next schedule.
+      activeDeadlineSeconds: 900
+      ttlSecondsAfterFinished: 86400
+
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: cost-detective
+        spec:
+          serviceAccountName: cost-detective
+          restartPolicy: OnFailure
+          automountServiceAccountToken: true
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+
+          containers:
+            - name: cost-detective
+              image: ghcr.io/your-org/cloud-cost-detective:0.3.0
+              imagePullPolicy: IfNotPresent
+
+              args:
+                - report
+                - --config=/etc/costdetective/costdetective.yaml
+                - --slack
+                - --verbose
+
+              env:
+                - name: COSTDETECTIVE_SLACK_WEBHOOK
+                  valueFrom:
+                    secretKeyRef:
+                      name: cost-detective-secrets
+                      key: slack-webhook
+                - name: SLACK_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: cost-detective-secrets
+                      key: slack-webhook
+
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/costdetective
+                  readOnly: true
+                # readOnlyRootFilesystem means anything that writes needs an
+                # explicit emptyDir — including the temp dir boto3 uses.
+                - name: tmp
+                  mountPath: /tmp
+
+          volumes:
+            - name: config
+              configMap:
+                name: cost-detective-config
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi

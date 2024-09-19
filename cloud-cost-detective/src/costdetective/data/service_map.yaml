@@ -1,0 +1,100 @@
+# Maps infrastructure resource types onto the billable service names that show up
+# in a cloud bill. Extend this in your own config under `service_map:` — user
+# entries are merged on top of these defaults.
+
+resource_types:
+  # ---- AWS ----------------------------------------------------------------
+  aws_instance: EC2
+  aws_spot_instance_request: EC2
+  aws_launch_template: EC2
+  aws_autoscaling_group: EC2
+  aws_ebs_volume: EC2
+  aws_eip: EC2
+  aws_nat_gateway: VPC
+  aws_db_instance: RDS
+  aws_rds_cluster: RDS
+  aws_rds_cluster_instance: RDS
+  aws_db_proxy: RDS
+  aws_api_gateway_rest_api: API Gateway
+  aws_api_gateway_stage: API Gateway
+  aws_api_gateway_deployment: API Gateway
+  aws_apigatewayv2_api: API Gateway
+  aws_apigatewayv2_stage: API Gateway
+  aws_lambda_function: Lambda
+  aws_s3_bucket: S3
+  aws_cloudfront_distribution: CloudFront
+  aws_eks_cluster: EKS
+  aws_eks_node_group: EKS
+  aws_ecs_service: ECS
+  aws_elasticache_cluster: ElastiCache
+  aws_opensearch_domain: OpenSearch
+  aws_redshift_cluster: Redshift
+  aws_sagemaker_endpoint: SageMaker
+  aws_bedrock_provisioned_model_throughput: Bedrock
+  aws_cloudwatch_log_group: CloudWatch
+  aws_lb: Elastic Load Balancing
+  aws_alb: Elastic Load Balancing
+
+  # ---- Azure --------------------------------------------------------------
+  azurerm_linux_virtual_machine: Virtual Machines
+  azurerm_windows_virtual_machine: Virtual Machines
+  azurerm_virtual_machine_scale_set: Virtual Machines
+  azurerm_managed_disk: Storage
+  azurerm_storage_account: Storage
+  azurerm_postgresql_flexible_server: Azure Database
+  azurerm_mssql_database: Azure SQL
+  azurerm_kubernetes_cluster: AKS
+  azurerm_container_app: Container Apps
+  azurerm_api_management: API Management
+  azurerm_cognitive_account: AI Foundry
+  azurerm_cognitive_deployment: AI Foundry
+  azurerm_ai_services: AI Foundry
+  azurerm_machine_learning_workspace: AI Foundry
+  azurerm_search_service: AI Search
+  azurerm_application_gateway: Application Gateway
+
+  # ---- GCP ----------------------------------------------------------------
+  google_compute_instance: Compute Engine
+  google_sql_database_instance: Cloud SQL
+  google_container_cluster: GKE
+  google_cloud_run_service: Cloud Run
+  google_storage_bucket: Cloud Storage
+
+# Free-text keywords used to link commit messages / resource names to services
+# when the resource type is unknown. Matched case-insensitively.
+keywords:
+  EC2: [ec2, instance, asg, autoscaling, ami, node]
+  RDS: [rds, postgres, mysql, aurora, database, db]
+  API Gateway: [api gateway, apigw, apigateway, rest api]
+  Lambda: [lambda, function]
+  AI Foundry: [ai foundry, foundry, openai, cognitive, gpt, embedding, inference, model deployment]
+  Bedrock: [bedrock, claude, titan]
+  SageMaker: [sagemaker, endpoint, training job]
+  EKS: [eks, kubernetes, k8s, cluster]
+  AKS: [aks, kubernetes, k8s]
+  S3: [s3, bucket, object storage]
+  Storage: [storage, blob, disk]
+  CloudWatch: [cloudwatch, logs, log group, retention]
+  VPC: [nat, vpc, gateway, egress]
+
+# Suggested remediation per service. `{service}` and `{resource}` are substituted.
+actions:
+  default: "Review recent changes to {service} and confirm the spend is intended."
+  AI Foundry: "Review unused deployment."
+  Bedrock: "Check provisioned throughput — switch to on-demand if utilisation is low."
+  SageMaker: "Check for idle inference endpoints left running after experiments."
+  EC2: "Check for oversized or idle instances; confirm the ASG min/max is intended."
+  RDS: "Verify the instance class change was intended and check for idle read replicas."
+  API Gateway: "Inspect request volume — a retry loop or missing cache can spike this."
+  Lambda: "Check invocation count and memory size for runaway triggers."
+  S3: "Check for a new lifecycle-less bucket or a large one-off upload."
+  CloudWatch: "Set a log retention policy — unbounded retention grows forever."
+  VPC: "NAT gateway data processing is billed per GB; check for chatty egress."
+  EKS: "Confirm node group scaling; check for orphaned nodes after a rollout."
+  Storage: "Check for unattached disks or snapshots left behind by a rebuild."
+
+# Actions keyed by the *kind* of change detected, used when it beats the
+# service-level default.
+actions_by_change:
+  create: "Review the newly created {resource} — confirm it is still needed."
+  delete: "A delete was applied but spend rose; check for orphaned dependent resources."

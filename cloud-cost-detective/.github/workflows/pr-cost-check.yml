@@ -1,0 +1,87 @@
+name: PR cost check
+
+# Correlates a pull request's *planned* Terraform changes against current
+# spend, then comments the verdict. This catches the "we shipped an expensive
+# resource and found out on the invoice" failure mode before merge.
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - "**/*.tf"
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-cost-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cost-check:
+    name: Estimate cost impact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+
+      - name: Install
+        run: pip install -e ".[aws]"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_COST_READER_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: cost-detective-pr-${{ github.event.pull_request.number }}
+
+      - name: Terraform plan
+        working-directory: infra
+        run: |
+          terraform init -input=false
+          terraform plan -out=tfplan -input=false -lock=false
+          terraform show -json tfplan > "$GITHUB_WORKSPACE/tfplan.json"
+
+      - name: Investigate
+        id: check
+        continue-on-error: true
+        env:
+          COSTDETECTIVE_TERRAFORM_PLAN: tfplan.json
+        run: |
+          set -o pipefail
+          costdetective report \
+            --source aws \
+            --change-source terraform \
+            --format markdown \
+            --fail-over "${{ vars.COST_FAIL_THRESHOLD || 100 }}" \
+            -o cost-report.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on the PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: cost-report.md
+          # A marker keeps repeat runs updating one comment instead of
+          # spamming the thread on every push.
+          edit-mode: replace
+
+      - name: Fail if the threshold was breached
+        if: steps.check.outcome == 'failure'
+        run: |
+          echo "::error::Projected cost impact exceeds the configured threshold."
+          exit 1

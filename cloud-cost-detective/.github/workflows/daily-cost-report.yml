@@ -1,0 +1,104 @@
+name: Daily cost report
+
+on:
+  schedule:
+    # 07:15 UTC, Monday–Friday. Cloud billing data lags by several hours, so
+    # this deliberately runs mid-morning rather than at midnight — a 00:05 run
+    # reports a half-populated previous day and produces phantom "drops".
+    - cron: "15 7 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days per comparison window (1 = yesterday vs the day before)"
+        required: false
+        default: "1"
+      post_to_slack:
+        description: "Post the result to Slack"
+        type: boolean
+        required: false
+        default: true
+
+# OIDC federation instead of long-lived access keys. `id-token: write` is what
+# lets the job mint a short-lived credential; see deploy/terraform for the role.
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: daily-cost-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: Investigate yesterday's spend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout infrastructure repo
+        uses: actions/checkout@v4
+        with:
+          # Commits are a correlation input, so we need history rather than a
+          # shallow clone. 7 days covers the widest sensible window.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install "cloud-cost-detective[aws] @ git+https://github.com/${{ github.repository }}.git@${{ github.sha }}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_COST_READER_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: cost-detective-${{ github.run_id }}
+
+      - name: Refresh Terraform state view
+        continue-on-error: true
+        run: |
+          # Best-effort: if state is unavailable the run still proceeds with
+          # git commits alone rather than failing the whole report.
+          terraform -chdir=infra init -backend=true -input=false
+          terraform -chdir=infra show -json > tfstate.json
+
+      - name: Run investigation
+        id: investigate
+        env:
+          COSTDETECTIVE_TERRAFORM_STATE: tfstate.json
+        run: |
+          set -o pipefail
+          costdetective report \
+            --source aws \
+            --change-source terraform \
+            --change-source git \
+            --days "${{ inputs.days || 1 }}" \
+            --verbose \
+            | tee report.txt
+
+          costdetective report --source aws --format json -o report.json
+          costdetective report --source aws --format markdown -o report.md
+
+      - name: Publish to job summary
+        if: always()
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post to Slack
+        if: ${{ inputs.post_to_slack != false }}
+        env:
+          COSTDETECTIVE_SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: costdetective report --source aws --slack
+
+      - name: Archive reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-report-${{ github.run_id }}
+          path: |
+            report.txt
+            report.json
+            report.md
+          retention-days: 30

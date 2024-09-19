@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloud-cost-detective"
+version = "0.3.0"
+description = "Explain why your cloud bill moved by correlating cost deltas with Terraform changes, cloud resources and git commits."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Cloud Cost Detective contributors" }]
+keywords = ["finops", "cloud", "cost", "aws", "azure", "terraform", "devops", "sre"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Systems Administration",
+]
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.34"]
+azure = ["azure-identity>=1.15", "azure-mgmt-costmanagement>=4.0"]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10", "types-PyYAML"]
+all = ["cloud-cost-detective[aws,azure,dev]"]
+
+[project.urls]
+Homepage = "https://github.com/your-org/cloud-cost-detective"
+Issues = "https://github.com/your-org/cloud-cost-detective/issues"
+
+[project.scripts]
+costdetective = "costdetective.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+costdetective = ["data/*.yaml", "data/*.json", "py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["costdetective"]
+ignore_missing_imports = true
+warn_unused_ignores = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["costdetective"]
+branch = true

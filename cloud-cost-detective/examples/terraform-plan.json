@@ -1,0 +1,63 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.5",
+  "resource_changes": [
+    {
+      "address": "module.ai_platform.azurerm_cognitive_deployment.gpt4o_rnd",
+      "module_address": "module.ai_platform",
+      "mode": "managed",
+      "type": "azurerm_cognitive_deployment",
+      "name": "gpt4o_rnd",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "gpt4o-rnd",
+          "sku": { "name": "Standard", "capacity": 50 },
+          "tags": { "Team": "AI-R&D", "Environment": "prod" }
+        }
+      }
+    },
+    {
+      "address": "module.orders.aws_db_instance.orders",
+      "module_address": "module.orders",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "orders",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": { "instance_class": "db.r6g.large" },
+        "after": {
+          "instance_class": "db.r6g.xlarge",
+          "tags": { "Team": "data-platform" }
+        }
+      }
+    },
+    {
+      "address": "aws_autoscaling_group.checkout",
+      "mode": "managed",
+      "type": "aws_autoscaling_group",
+      "name": "checkout",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": { "desired_capacity": 4 },
+        "after": { "desired_capacity": 5, "tags": { "Team": "platform" } }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.logs",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "logs",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["no-op"],
+        "before": { "bucket": "example-logs" },
+        "after": { "bucket": "example-logs" }
+      }
+    }
+  ]
+}

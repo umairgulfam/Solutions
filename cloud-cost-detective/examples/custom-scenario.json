@@ -1,0 +1,50 @@
+{
+  "description": "A CloudWatch log-retention leak — steady growth with no obvious deploy behind it.",
+  "currency": "USD",
+  "services": [
+    {
+      "service": "CloudWatch",
+      "provider": "aws",
+      "previous": 62.0,
+      "current": 91.0,
+      "tags": { "Team": "platform" }
+    },
+    {
+      "service": "VPC",
+      "provider": "aws",
+      "previous": 40.0,
+      "current": 58.0,
+      "tags": {}
+    },
+    {
+      "service": "Lambda",
+      "provider": "aws",
+      "previous": 22.0,
+      "current": 23.0,
+      "tags": { "Team": "payments" }
+    }
+  ],
+  "changes": [
+    {
+      "source": "terraform",
+      "identifier": "aws_cloudwatch_log_group.debug",
+      "title": "CloudWatch log group created without a retention policy",
+      "action": "create",
+      "hours_ago": 30,
+      "author": "a.fernandes",
+      "team": "platform",
+      "resource_types": ["aws_cloudwatch_log_group"]
+    },
+    {
+      "source": "git",
+      "identifier": "b81f0c4",
+      "title": "feat(payments): enable debug logging in the settlement worker",
+      "action": "update",
+      "hours_ago": 31,
+      "author": "a.fernandes",
+      "resource_types": [],
+      "url": "https://github.com/example-org/infra/commit/b81f0c4",
+      "metadata": { "files": ["payments/logging.tf"] }
+    }
+  ]
+}
