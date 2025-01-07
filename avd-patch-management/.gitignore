@@ -1,0 +1,34 @@
+# Local configuration and secrets
+config/patch-config.local.json
+*.local.json
+.env
+*.pem
+*.pfx
+
+# Downloaded updates - never commit these, they are hundreds of MB
+*.msu
+*.cab
+*.part
+cache/
+downloads/
+
+# Generated manifests and reports
+manifest-*.json
+reports/
+*.log
+logs/
+
+# Bicep build output
+*.json.bicep
+main.json
+
+# Test output
+TestResults.xml
+coverage.xml
+
+# Editors and OS
+.vs/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,92 @@
+{
+  "$comment": [
+    "Configuration for AVD patch management.",
+    "",
+    "targetUbr is the single most important field. It is the UBR (the fourth",
+    "part of the build number, e.g. the 4890 in 22631.4890) that the machine",
+    "will report AFTER this month's update installs. It is published in every",
+    "KB article under 'this update ... increments the build to'. Setting it",
+    "lets a session host decide in milliseconds whether it needs patching at",
+    "all, with no DISM call and no download. Leave it at 0 and the installer",
+    "falls back to a slower KB-presence check.",
+    "",
+    "Update targetUbr each month as part of the change that approves the",
+    "cycle. Docs/runbook.md describes where to find it."
+  ],
+
+  "storage": {
+    "accountName": "stavdpatchprod01",
+    "patchContainer": "patches",
+    "managedIdentityClientId": null,
+    "endpointSuffix": "core.windows.net"
+  },
+
+  "logging": {
+    "downloaderLogPath": null,
+    "sessionHostLogPath": "C:\\ProgramData\\AvdPatch\\logs",
+    "retentionDays": 90
+  },
+
+  "targets": [
+    {
+      "name": "win11-23h2-multisession",
+      "enabled": true,
+      "description": "Windows 11 Enterprise multi-session, 23H2",
+      "searchQueryTemplate": "{cycle} Cumulative Update for Windows 11 Version 23H2 x64",
+      "titleMustMatch": "Cumulative Update for Windows 11 Version 23H2",
+      "titleMustNotMatch": "Dynamic Update|Preview|Framework|Out-of-band|arm64",
+      "classification": "Security Updates",
+      "architecture": "x64",
+      "buildNumber": 22631,
+      "displayVersion": "23H2",
+      "targetUbr": 0
+    },
+    {
+      "name": "win11-22h2-multisession",
+      "enabled": false,
+      "description": "Windows 11 Enterprise multi-session, 22H2. Enable only while hosts remain on 22H2.",
+      "searchQueryTemplate": "{cycle} Cumulative Update for Windows 11 Version 22H2 x64",
+      "titleMustMatch": "Cumulative Update for Windows 11 Version 22H2",
+      "titleMustNotMatch": "Dynamic Update|Preview|Framework|Out-of-band|arm64",
+      "classification": "Security Updates",
+      "architecture": "x64",
+      "buildNumber": 22621,
+      "displayVersion": "22H2",
+      "targetUbr": 0
+    },
+    {
+      "name": "win10-22h2-multisession",
+      "enabled": false,
+      "description": "Windows 10 Enterprise multi-session, 22H2.",
+      "searchQueryTemplate": "{cycle} Cumulative Update for Windows 10 Version 22H2 x64",
+      "titleMustMatch": "Cumulative Update for Windows 10 Version 22H2",
+      "titleMustNotMatch": "Dynamic Update|Preview|Framework|Out-of-band|arm64",
+      "classification": "Security Updates",
+      "architecture": "x64",
+      "buildNumber": 19045,
+      "displayVersion": "22H2",
+      "targetUbr": 0
+    }
+  ],
+
+  "orchestration": {
+    "$comment": "Used by Invoke-AvdPatchOrchestrator.ps1 only. The scheduled-task deployment ignores this section.",
+    "hostPoolName": "hp-avd-prod-01",
+    "resourceGroupName": "rg-avd-prod",
+    "subscriptionId": null,
+    "batchPercentage": 25,
+    "maxParallelPerBatch": 10,
+    "drainGracePeriodMinutes": 15,
+    "userWarningMessage": "This session host is being patched tonight. Please save your work and sign out within 15 minutes.",
+    "logOffUsersAfterGrace": true,
+    "rebootAfterInstall": true,
+    "healthCheckTimeoutMinutes": 30
+  },
+
+  "schedule": {
+    "$comment": "Documentation of intent. The actual triggers live in the Bicep template and the scheduled-task registration script.",
+    "downloadOn": "Second Tuesday, 20:00 UTC",
+    "installOn": "Second Wednesday, 02:00 local",
+    "rationale": "Download after the US-morning catalog publish; install the following night so a bad patch is caught in the download step, not on 500 hosts."
+  }
+}

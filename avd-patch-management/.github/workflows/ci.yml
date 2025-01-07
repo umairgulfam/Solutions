@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install analyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Analyze
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning
+          if ($results) {
+            $results | Format-Table -AutoSize | Out-String | Write-Host
+            # Errors fail the build; warnings are reported but tolerated.
+            if ($results | Where-Object Severity -eq 'Error') {
+              throw "PSScriptAnalyzer found $(($results | Where-Object Severity -eq 'Error').Count) error(s)."
+            }
+          }
+          Write-Host 'No analyzer errors.'
+
+  syntax:
+    name: Parse all scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem -Recurse -Include *.ps1,*.psm1,*.psd1 | ForEach-Object {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors) {
+              $failed = $true
+              Write-Host "::error file=$($_.FullName)::$($errors[0].Message)"
+            }
+          }
+          if ($failed) { throw 'One or more files failed to parse.' }
+          Write-Host 'All files parse cleanly.'
+
+  offline-checks:
+    name: Offline logic checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run
+        shell: pwsh
+        run: ./tests/Invoke-OfflineChecks.ps1
+
+  pester:
+    name: Pester (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -MinimumVersion 5.5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = 'TestResults.xml'
+          Invoke-Pester -Configuration $config
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-${{ matrix.os }}
+          path: TestResults.xml
+          retention-days: 7
+
+  bicep:
+    name: Validate Bicep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build template
+        run: az bicep build --file deploy/main.bicep --outfile /tmp/main.json
+
+      - name: Confirm ARM output is valid JSON
+        run: python3 -c "import json;json.load(open('/tmp/main.json'));print('Bicep compiles to valid ARM.')"
+
+  config:
+    name: Validate config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JSON and required fields
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          cfg = json.load(open('config/patch-config.json'))
+          required = {'name','searchQueryTemplate','architecture','buildNumber','displayVersion','targetUbr'}
+          problems = []
+          for t in cfg['targets']:
+              missing = required - set(t)
+              if missing:
+                  problems.append(f"{t.get('name','?')}: missing {sorted(missing)}")
+          if problems:
+              print('\n'.join(problems)); sys.exit(1)
+          print(f"Config valid: {len(cfg['targets'])} target(s).")
+          PY

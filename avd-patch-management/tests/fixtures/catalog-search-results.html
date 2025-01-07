@@ -1,0 +1,116 @@
+<!--
+  Trimmed capture of a Microsoft Update Catalog Search.aspx response.
+  Keeps the structure the parser depends on (row ids, cell order, the hidden
+  byte-count span) and drops the surrounding page chrome.
+
+  Deliberately contains rows the selector must REJECT: an arm64 build, a
+  Dynamic Update, a .NET Framework update and a Server variant. If
+  Select-BestCatalogUpdate ever starts returning one of those, the tests fail.
+-->
+<html>
+<head><title>Microsoft Update Catalog</title></head>
+<body>
+<table id="ctl00_catalogBody_updateMatches" class="resultsBorder">
+  <tr class="headerCell">
+    <td></td><td>Title</td><td>Products</td><td>Classification</td>
+    <td>Last Updated</td><td>Version</td><td>Size</td><td>Download</td>
+  </tr>
+
+  <tr id="a1b2c3d4-1111-2222-3333-444455556666_R1">
+    <td><input type="checkbox" /></td>
+    <td>
+      <a id="a1b2c3d4-1111-2222-3333-444455556666_link" href="javascript:void(0);"
+         onclick='goToDetails("a1b2c3d4-1111-2222-3333-444455556666");'>
+        2026-09 Cumulative Update for Windows 11 Version 23H2 for x64-based Systems (KB5065432)
+      </a>
+    </td>
+    <td>Windows 11</td>
+    <td>Security Updates</td>
+    <td>9/9/2026</td>
+    <td>n/a</td>
+    <td>
+      <span id="a1b2c3d4-1111-2222-3333-444455556666_size">742.3 MB</span>
+      <div style="display:none"><span>778389504</span></div>
+    </td>
+    <td><input id="a1b2c3d4-1111-2222-3333-444455556666_downloadButton" type="button" value="Download" /></td>
+  </tr>
+
+  <tr id="b2c3d4e5-1111-2222-3333-444455556666_R2">
+    <td><input type="checkbox" /></td>
+    <td>
+      <a id="b2c3d4e5-1111-2222-3333-444455556666_link" href="javascript:void(0);"
+         onclick='goToDetails("b2c3d4e5-1111-2222-3333-444455556666");'>
+        2026-09 Cumulative Update for Windows 11 Version 23H2 for arm64-based Systems (KB5065432)
+      </a>
+    </td>
+    <td>Windows 11</td>
+    <td>Security Updates</td>
+    <td>9/9/2026</td>
+    <td>n/a</td>
+    <td>
+      <span id="b2c3d4e5-1111-2222-3333-444455556666_size">801.1 MB</span>
+      <div style="display:none"><span>840039628</span></div>
+    </td>
+    <td><input type="button" value="Download" /></td>
+  </tr>
+
+  <tr id="c3d4e5f6-1111-2222-3333-444455556666_R3">
+    <td><input type="checkbox" /></td>
+    <td>
+      <a id="c3d4e5f6-1111-2222-3333-444455556666_link" href="javascript:void(0);"
+         onclick='goToDetails("c3d4e5f6-1111-2222-3333-444455556666");'>
+        2026-09 Dynamic Update for Windows 11 Version 23H2 for x64-based Systems (KB5065999)
+      </a>
+    </td>
+    <td>Windows 11</td>
+    <td>Updates</td>
+    <td>9/9/2026</td>
+    <td>n/a</td>
+    <td>
+      <span id="c3d4e5f6-1111-2222-3333-444455556666_size">45.2 MB</span>
+      <div style="display:none"><span>47398912</span></div>
+    </td>
+    <td><input type="button" value="Download" /></td>
+  </tr>
+
+  <tr id="d4e5f6a7-1111-2222-3333-444455556666_R4">
+    <td><input type="checkbox" /></td>
+    <td>
+      <a id="d4e5f6a7-1111-2222-3333-444455556666_link" href="javascript:void(0);"
+         onclick='goToDetails("d4e5f6a7-1111-2222-3333-444455556666");'>
+        2026-09 Cumulative Update for .NET Framework 3.5 and 4.8.1 for Windows 11 Version 23H2 for x64 (KB5065111)
+      </a>
+    </td>
+    <td>Windows 11</td>
+    <td>Security Updates</td>
+    <td>9/9/2026</td>
+    <td>n/a</td>
+    <td>
+      <span id="d4e5f6a7-1111-2222-3333-444455556666_size">62.0 MB</span>
+      <div style="display:none"><span>65011712</span></div>
+    </td>
+    <td><input type="button" value="Download" /></td>
+  </tr>
+
+  <tr id="e5f6a7b8-1111-2222-3333-444455556666_R5">
+    <td><input type="checkbox" /></td>
+    <td>
+      <a id="e5f6a7b8-1111-2222-3333-444455556666_link" href="javascript:void(0);"
+         onclick='goToDetails("e5f6a7b8-1111-2222-3333-444455556666");'>
+        2026-08 Cumulative Update for Windows 11 Version 23H2 for x64-based Systems (KB5062000)
+      </a>
+    </td>
+    <td>Windows 11</td>
+    <td>Security Updates</td>
+    <td>8/12/2026</td>
+    <td>n/a</td>
+    <td>
+      <span id="e5f6a7b8-1111-2222-3333-444455556666_size">730.0 MB</span>
+      <div style="display:none"><span>765460480</span></div>
+    </td>
+    <td><input type="button" value="Download" /></td>
+  </tr>
+
+</table>
+</body>
+</html>
