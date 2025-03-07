@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cloud-resource-garbage-collector"
+version = "1.0.0"
+description = "Approval-gated multi-cloud resource waste detector for AWS, Azure, and GCP"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Umair Gulfam" }]
+keywords = ["finops", "devops", "cloud", "aws", "azure", "gcp"]
+dependencies = [
+  "fastapi>=0.116,<1",
+  "uvicorn[standard]>=0.35,<1",
+  "pydantic>=2.11,<3",
+  "pydantic-settings>=2.10,<3",
+  "typer>=0.16,<1",
+  "rich>=14,<15",
+  "sqlalchemy>=2.0,<3",
+  "httpx>=0.28,<1",
+]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.39,<2"]
+azure = ["azure-identity>=1.23,<2", "azure-mgmt-resourcegraph>=8.0,<9"]
+gcp = ["google-cloud-asset>=3.30,<4"]
+all = [
+  "boto3>=1.39,<2",
+  "azure-identity>=1.23,<2",
+  "azure-mgmt-resourcegraph>=8.0,<9",
+  "google-cloud-asset>=3.30,<4",
+]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-cov>=6.2,<7",
+  "ruff>=0.12,<1",
+  "mypy>=1.17,<2",
+  "bandit[toml]>=1.8,<2",
+]
+
+[project.scripts]
+crgc = "garbage_collector.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/garbage_collector"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=garbage_collector --cov-report=term-missing --cov-fail-under=75"
+
+[tool.coverage.run]
+omit = [
+  "src/garbage_collector/cli.py",
+  "src/garbage_collector/providers/aws.py",
+  "src/garbage_collector/providers/azure.py",
+  "src/garbage_collector/providers/gcp.py",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101"]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]

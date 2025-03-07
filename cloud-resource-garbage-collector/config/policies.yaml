@@ -1,0 +1,20 @@
+# Human-readable reference. Runtime defaults live in settings and can be
+# overridden with CRGC_* environment variables.
+defaults:
+  idle_days: 30
+  old_snapshot_days: 90
+  old_image_days: 90
+  minimum_monthly_cost_usd: 1.00
+  required_owner_tags: [owner, Owner, managed-by, ManagedBy]
+
+resource_types:
+  virtual_machine: { rule: low_cpu_and_no_network }
+  public_ip: { rule: unattached }
+  disk: { rule: unattached }
+  snapshot: { rule: older_than_threshold }
+  network_interface: { rule: unattached }
+  load_balancer: { rule: no_backends }
+  database: { rule: stopped_or_idle }
+  nat_gateway: { rule: no_traffic }
+  container_image: { rule: untagged_or_old }
+

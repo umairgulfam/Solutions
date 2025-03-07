@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cloud Resource Garbage Collector</title>
+  <style>
+    :root{font-family:Inter,system-ui,sans-serif;color:#dbeafe;background:#07111f}body{margin:0}.wrap{max-width:1200px;margin:auto;padding:32px}.top{display:flex;justify-content:space-between;gap:20px;align-items:center}.badge{color:#67e8f9}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0}.card,table{background:#0d1b2e;border:1px solid #213553;border-radius:14px}.card{padding:20px}.num{font-size:2rem;font-weight:800}input,button{border:1px solid #315277;border-radius:8px;padding:10px;background:#10243d;color:#fff}button{cursor:pointer;background:#0369a1}table{width:100%;border-collapse:collapse;overflow:hidden}th,td{text-align:left;padding:12px;border-bottom:1px solid #213553;font-size:.9rem}.status{padding:4px 8px;border-radius:99px;background:#263a56}.actions button{padding:6px;margin:2px}.muted{color:#8da7c5}@media(max-width:800px){.cards{grid-template-columns:1fr}.top{display:block}table{display:block;overflow:auto}}
+  </style>
+</head>
+<body><main class="wrap">
+  <div class="top"><div><div class="badge">MULTI-CLOUD FINOPS</div><h1>Cloud Resource “Garbage Collector”</h1><p class="muted">Find waste. Assign ownership. Require approval. Keep an audit trail.</p></div><div><input id="key" type="password" placeholder="API key"><button onclick="scan()">Run demo scan</button></div></div>
+  <section class="cards"><div class="card"><div class="muted">Open findings</div><div class="num" id="count">0</div></div><div class="card"><div class="muted">Potential monthly savings</div><div class="num" id="savings">$0</div></div><div class="card"><div class="muted">Unassigned owners</div><div class="num" id="owners">0</div></div></section>
+  <table><thead><tr><th>Resource</th><th>Provider</th><th>Why suspicious?</th><th>Owner</th><th>USD/month</th><th>Status</th><th>Decision</th></tr></thead><tbody id="rows"></tbody></table>
+</main><script>
+const headers=()=>({'Content-Type':'application/json','X-API-Key':document.getElementById('key').value});
+async function load(){const r=await fetch('/api/v1/findings',{headers:headers()});if(!r.ok)return;const d=await r.json();document.getElementById('count').textContent=d.filter(x=>x.status==='pending').length;document.getElementById('savings').textContent='$'+d.reduce((a,x)=>a+x.estimated_monthly_savings,0).toFixed(2);document.getElementById('owners').textContent=d.filter(x=>x.resource.tags.owner===undefined).length;document.getElementById('rows').innerHTML=d.map(x=>`<tr><td><b>${x.resource.name}</b><br><span class="muted">${x.resource.resource_type}</span></td><td>${x.resource.provider}</td><td>${x.reason}<br><span class="muted">${x.evidence.join(' · ')}</span></td><td>${x.resource.tags.owner||'unassigned'}</td><td>$${x.estimated_monthly_savings.toFixed(2)}</td><td><span class="status">${x.status}</span></td><td class="actions"><button onclick="decision('${x.fingerprint}','approved')">Approve</button><button onclick="decision('${x.fingerprint}','ignored')">Ignore</button></td></tr>`).join('')}
+async function scan(){await fetch('/api/v1/scans',{method:'POST',headers:headers(),body:JSON.stringify({providers:['mock']})});load()}
+async function decision(id,d){await fetch(`/api/v1/findings/${id}/${d}`,{method:'POST',headers:headers(),body:JSON.stringify({actor:'dashboard-user',comment:'Decision from dashboard'})});load()}
+</script></body></html>
+

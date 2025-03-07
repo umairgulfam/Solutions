@@ -1,0 +1,20 @@
+services:
+  garbage-collector:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - crgc-data:/app/data
+    environment:
+      CRGC_DATABASE_URL: sqlite:////app/data/garbage_collector.db
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  crgc-data:
+
