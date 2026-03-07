@@ -1,0 +1,67 @@
+subscription_id = "00000000-0000-0000-0000-000000000000"
+tenant_id       = "00000000-0000-0000-0000-000000000000"
+location        = "eastus"
+environment     = "dev"
+name_prefix     = "contoso"
+
+# Use small, medium, or large for an opinionated preset; use custom below.
+capacity_profile = "custom"
+
+host_pools = {
+  dev = {
+    type            = "Pooled"
+    session_hosts   = 2
+    vm_size         = "Standard_D4s_v5"
+    max_sessions    = 12
+    peak_start_time = "08:00"
+    peak_end_time   = "18:00"
+  }
+  qa = {
+    type                     = "Pooled"
+    session_hosts            = 2
+    vm_size                  = "Standard_D4s_v5"
+    peak_start_time          = "09:00"
+    peak_end_time            = "17:00"
+    off_peak_minimum_hosts   = 1
+  }
+  prod-us = {
+    type                     = "Pooled"
+    session_hosts            = 5
+    vm_size                  = "Standard_D8s_v5"
+    max_sessions             = 16
+    peak_start_time          = "07:00"
+    peak_end_time            = "22:00"
+    peak_minimum_hosts_pct   = 60
+    off_peak_minimum_hosts   = 1
+  }
+  prod-eu = {
+    type                   = "Pooled"
+    session_hosts          = 4
+    vm_size                = "Standard_D8s_v5"
+    scaling_timezone       = "W. Europe Standard Time"
+    peak_minimum_hosts_pct = 50
+  }
+}
+
+join_type           = "entra"
+fslogix_storage_type = "azure_files"
+enable_private_endpoints = false
+private_only_data_plane  = false
+# AADKERB supports Microsoft Entra Kerberos for hybrid user identities.
+azure_files_directory_type = "AADKERB"
+# When fslogix_storage_type = "anf", also provide anf_active_directory through
+# a sensitive variables file or TF_VAR_anf_active_directory. Never commit it.
+monthly_budget_amount     = 3000
+budget_contact_emails     = ["finops@example.com"]
+
+rbac = {
+  desktop_user_principal_ids = []
+  admin_principal_ids        = []
+}
+
+tags = {
+  managed-by  = "terraform"
+  workload    = "azure-virtual-desktop"
+  owner       = "cloud-platform@example.com"
+  cost-center = "IT-100"
+}

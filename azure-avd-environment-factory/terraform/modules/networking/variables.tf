@@ -1,0 +1,9 @@
+variable "name_prefix" { type = string }
+variable "location" { type = string }
+variable "resource_group_name" { type = string }
+variable "vnet_address_space" { type = list(string) }
+variable "session_host_subnet_prefixes" { type = list(string) }
+variable "private_endpoint_subnet_prefixes" { type = list(string) }
+variable "anf_subnet_prefixes" { type = list(string) }
+variable "dns_servers" { type = list(string) }
+variable "tags" { type = map(string) }

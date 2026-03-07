@@ -1,0 +1,82 @@
+name: Terraform apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Protected environment to deploy
+        type: choice
+        options: [dev, test, production]
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: avd-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8 }
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Initialize remote state
+        working-directory: terraform
+        run: terraform init
+      - name: Plan reviewed changes
+        working-directory: terraform
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform plan -out=avd.tfplan -var-file=environments/${{ inputs.environment }}/terraform.tfvars
+      - name: Render reviewable plan
+        working-directory: terraform
+        run: terraform show -no-color avd.tfplan > avd-plan.txt
+      - name: Upload immutable plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: avd-${{ inputs.environment }}-${{ github.run_id }}
+          path: |
+            terraform/avd.tfplan
+            terraform/avd-plan.txt
+            terraform/.terraform.lock.hcl
+          retention-days: 1
+          if-no-files-found: error
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8 }
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Initialize exact provider versions
+        working-directory: terraform
+        run: terraform init -lockfile=readonly
+      - name: Download reviewed plan
+        uses: actions/download-artifact@v4
+        with:
+          name: avd-${{ inputs.environment }}-${{ github.run_id }}
+          path: terraform
+      - name: Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve avd.tfplan

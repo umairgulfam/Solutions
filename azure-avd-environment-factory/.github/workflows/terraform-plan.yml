@@ -1,0 +1,52 @@
+name: Terraform plan
+
+on:
+  pull_request:
+    paths: ["terraform/**", ".github/workflows/terraform-*.yml"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to plan
+        type: choice
+        options: [dev, test, production]
+        default: dev
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+env:
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8 }
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Format
+        run: terraform fmt -check -recursive
+      - name: Initialize
+        working-directory: terraform
+        run: terraform init -backend=false
+      - name: Validate
+        working-directory: terraform
+        run: terraform validate
+      - name: Unit tests
+        working-directory: terraform
+        run: terraform test
+      - name: Plan
+        working-directory: terraform
+        env:
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform plan -no-color -out=avd.tfplan -var-file=environments/${{ inputs.environment || 'dev' }}/terraform.tfvars
